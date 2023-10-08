@@ -29,9 +29,11 @@ impl log::Log for SimpleLogger {
         if self.enabled(record.metadata()) {
             print_colorized(
                 format_args!(
-                    "[{:>5} {}] : {}\r\n",
+                    "[{:>5} {}] ({}:{}): {}\r\n",
                     record.level(),
                     hart_id(),
+                    record.file().unwrap(),
+                    record.line().unwrap(),
                     record.args()
                 ),
                 level_to_color(record.level()),

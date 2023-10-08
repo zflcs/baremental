@@ -10,7 +10,7 @@ extern crate log;
 extern crate alloc;
 use core::{arch::asm, sync::atomic::{AtomicUsize, Ordering::Relaxed}};
 
-use crate::config::{CLOCK_FREQ, CPU_NUM};
+use crate::{config::{CLOCK_FREQ, CPU_NUM}, net::udp_test};
 use config::{TOTAL_BOOT_STACK_SIZE, BOOT_STACK_SIZE};
 use riscv::register::time;
 
@@ -111,6 +111,7 @@ pub fn rust_main_init(hart_id: usize) {
     logger::init();
     mm::init_heap();
     plic::init();
+    net::init();
     drivers::init();
     if CPU_NUM > 1 {
         for i in 0..CPU_NUM {
@@ -138,7 +139,8 @@ pub fn rust_main(hart_id: usize) -> ! {
     plic::init_hart(hart_id);
     info!("Tests begin!");
 
-    loop { }
+    udp_test();
+    loop {}
 }
 
 

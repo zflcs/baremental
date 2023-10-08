@@ -1,89 +1,59 @@
 
-mod reply;
+mod interface;
+mod socket;
 
-use alloc::boxed::Box;
-use axi_ethernet::XAE_MAX_FRAME_SIZE;
-use spin::Lazy;
+use alloc::vec;
+use interface::*;
+use socket::*;
+use smoltcp::socket::udp::{Socket, PacketBuffer, PacketMetadata};
 
-use crate::drivers::{net::NetDevice, dma::AXI_DMA_INTR, AXI_DMA};
 
-use smoltcp::wire::*;
 
-pub struct NetStack {
-    mac_addr: EthernetAddress,
-    ipv4_addr: Ipv4Address,
+use crate::drivers::net::*;
+
+use smoltcp::time::Instant;
+
+pub fn init() {
+    interface::set_up();
 }
 
-impl Default for NetStack {
-    fn default() -> Self {
-        Self { 
-            mac_addr: EthernetAddress::from_bytes(&[0x00, 0x0A, 0x35, 0x01, 0x02, 0x03]),
-            ipv4_addr: Ipv4Address::new(172, 16, 1, 2),
+
+pub fn net_interrupt_handler(irq: u16) {
+    if irq == 2 {
+        log::debug!("new mac_irq");
+    } else if irq == 3 {
+        log::debug!("new interrupt {:b}", AXI_NET.eth.lock().get_intr_status());
+        if AXI_NET.eth.lock().is_rx_cmplt() {
+            INTERFACE.lock().poll(
+                Instant::ZERO, 
+                unsafe { &mut *AXI_NET.as_mut_ptr() },
+                &mut SOCKET_SET.lock()
+            );
+        } else {
+            log::warn!("other interrupt happend");
         }
     }
 }
 
-pub static NET_STACK: Lazy<NetStack> = Lazy::new(|| NetStack::default());
-
-
-pub fn net_interrupt_handler(irq: u16) {
-    use crate::{net::reply::{build_arp_repr, build_eth_repr, build_eth_frame}, drivers::{net::ETHERNET, dma}};
-    if irq == 2 {
-        log::debug!("new mac_irq");
-    } else if irq == 3 {            // maybe need to wait a moment
-        log::debug!("new interrupt {:b}", ETHERNET.lock().get_intr_status());
-        if ETHERNET.lock().is_rx_cmplt() {
-            ETHERNET.lock().clear_rx_cmplt();
-            let rx_frame = Box::pin([0u8; XAE_MAX_FRAME_SIZE]);
-            let buf = AXI_DMA.rx_submit(rx_frame).unwrap().wait();
-            if let Ok(eth_packet) = EthernetFrame::new_checked((*buf).as_ref()) {
-                match eth_packet.ethertype() {
-                    EthernetProtocol::Arp => {
-                        if let Ok(arp_packet) = ArpPacket::new_checked(eth_packet.payload()) {
-                            if arp_packet.operation() == ArpOperation::Request {
-                                let dst_mac_addr = EthernetAddress::from_bytes(arp_packet.source_hardware_addr());
-                                let arp_repr = build_arp_repr(
-                                    NET_STACK.mac_addr, 
-                                    NET_STACK.ipv4_addr, 
-                                    dst_mac_addr,
-                                    Ipv4Address::from_bytes(arp_packet.source_protocol_addr())    
-                                );
-                                let eth_repr = build_eth_repr(
-                                    NET_STACK.mac_addr, 
-                                    dst_mac_addr, 
-                                    EthernetProtocol::Arp
-                                );
-                                for _ in 0..400 {
-                                    if let Some(eth_frame) = build_eth_frame(eth_repr, Some(arp_repr), None) {
-                                        NetDevice.transmit(eth_frame.into_inner());
-                                    }
-                                }
-                            } else {
-                                log::trace!("don't need to reply")
-                            }
-                        } else {
-                            log::trace!("Cannot analysis Arp protocol");
-                        }
-                    },
-                    _ => { log::trace!("Protocol is not supported"); }
-                }
-            } else {
-                log::trace!("do nothing");
-            }
-        } else {
-            log::warn!("other interrupt happend");
+pub fn udp_test() {
+    let udp_rx_buffer = PacketBuffer::new(
+        vec![PacketMetadata::EMPTY; 5],
+        vec![0; 65535],
+    );
+    let udp_tx_buffer = PacketBuffer::new(
+        vec![PacketMetadata::EMPTY; 5],
+        vec![0; 65535],
+    );
+    let mut udp_socket = Socket::new(udp_rx_buffer, udp_tx_buffer);
+    udp_socket.bind(80).unwrap();
+    let udp_handle = SOCKET_SET.lock().add(udp_socket);
+    loop {
+        let mut binding = SOCKET_SET.lock();
+        let socket = binding.get_mut::<Socket>(udp_handle);
+        if let Ok((data, endpoint)) = socket.recv() {
+            debug!("udp:80 recv data: {:#x?} from {}", data, endpoint);
         }
-    } else if irq == 4 {
-        log::debug!("new mm2s intr");
-        if !AXI_DMA_INTR.tx_intr_handler() {
-            dma::init();
-        }
-        AXI_DMA.tx_from_hw();
-    } else if irq == 5 {
-        log::debug!("new s2mm intr");
-        if !AXI_DMA_INTR.rx_intr_handler() {
-            dma::init();
-        }
-        AXI_DMA.rx_from_hw();
+        drop(socket);
+        drop(binding);
     }
 }

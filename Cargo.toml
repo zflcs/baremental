@@ -16,16 +16,18 @@ lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 blake3 = { version = "1.2.0", default-features = false }
 array-init = "2.0.0"
 sbi-rt = { version = "0.0.2", features = ["legacy"] }
-axi-ethernet = { git = "https://github.com/zflcs/axi-ethernet" }
-axi-dma = { path = "../axi-dma"}
+axi-ethernet = { path = "../axi-ethernet" }
+axi-dma = { path = "../axi-dma" }
 kernel-sync = {  git = "https://github.com/tkf2019/kernel-sync" }
 
 [dependencies.smoltcp]
 version = "0.10.0"
 default-features = false
 features = [
-  "alloc", "log",   # no std
+  "alloc", "log",  # no std
   "medium-ethernet",
   "proto-ipv4",
-  "socket-raw", "socket-icmp", "socket-udp", "socket-tcp", "socket-dns"
+  "_proto-fragmentation",
+  "proto-ipv4-fragmentation",
+  "socket-raw", "socket-icmp", "socket-udp", "socket-tcp", "socket-dns", "socket-dhcpv4"
 ]
