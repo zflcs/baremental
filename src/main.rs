@@ -12,7 +12,7 @@ use core::{arch::asm, sync::atomic::{AtomicUsize, Ordering::Relaxed}};
 
 use crate::config::{CLOCK_FREQ, CPU_NUM};
 use config::{TOTAL_BOOT_STACK_SIZE, BOOT_STACK_SIZE};
-use riscv::register::time;
+use riscv::register::{time, utvec, ustatus, uip, sideleg, uie, sstatus, sepc, sip};
 
 
 #[macro_use]
@@ -140,7 +140,8 @@ pub fn rust_main(hart_id: usize) -> ! {
     info!("Tests begin!");
 
     // net::udp_test();
-    net::tcp_test();
+    // net::tcp_test();
+    test_n_ext();
     loop {}
 }
 
@@ -148,4 +149,30 @@ pub fn rust_main(hart_id: usize) -> ! {
 pub fn delay(ms: usize) {
     let start = time::read();
     while time::read() - start < CLOCK_FREQ * ms / 1000 {}
+}
+
+/// test the RISC-V N extension
+pub fn test_n_ext() {
+    unsafe {
+        sideleg::set_usoft();   
+        utvec::write(user_trap_handler as _, utvec::TrapMode::Direct);
+        ustatus::set_uie();
+        uie::set_usoft();
+        sip::set_usoft();
+        uip::set_usoft();
+        sstatus::set_spp(sstatus::SPP::User);
+        sepc::write(user_fun as _);
+        core::arch::asm!("sret");
+    }
+}
+
+pub fn user_fun() {
+    loop {
+        // log::debug!("into user_fun");
+        unsafe { core::arch::asm!("ebreak"); }
+    }
+}
+
+pub fn user_trap_handler() {
+    log::debug!("into user_trap_handler");
 }

@@ -4,7 +4,7 @@ use riscv::register::{
     mtvec::TrapMode,
     scause, sepc, sie,    
     sstatus::{self, Sstatus},
-    stval, stvec,
+    stval, stvec, uip,
 };
 
 #[repr(C)]
@@ -26,6 +26,7 @@ pub fn init() {
         asm!("csrwi sideleg, 0");
         // enable supervisor interrupt
         sstatus::set_sie();
+        sie::set_usoft();
         // enable external interrupt
         sie::set_sext();
     }
@@ -34,13 +35,16 @@ pub fn init() {
 #[no_mangle]
 pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
     // disable supervisor interrupt
-    unsafe { sstatus::clear_sie() };
     let scause = scause::read();
     let stval = stval::read();
     match scause.cause() {
         scause::Trap::Interrupt(scause::Interrupt::SupervisorExternal) => {
             // debug!("SEI");
             crate::plic::handle_external_interrupt(hart_id(), 'S');
+        }
+        scause::Trap::Exception(scause::Exception::Breakpoint) => {
+            log::debug!("ebreak");
+            unsafe { uip::set_usoft(); }
         }
         _ => {
             error!(
