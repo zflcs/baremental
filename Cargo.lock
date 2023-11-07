@@ -47,6 +47,7 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 [[package]]
 name = "axi-dma"
 version = "0.1.0"
+source = "git+https://github.com/zflcs/axi-dma.git#9c3cf75fc8129c9aad85e384d48d71b567f2e8ae"
 dependencies = [
  "axidma-pac",
  "embedded-dma",
@@ -57,6 +58,7 @@ dependencies = [
 [[package]]
 name = "axi-ethernet"
 version = "0.1.0"
+source = "git+https://github.com/zflcs/axi-ethernet.git#32482df395383b7f5e61b8a79d9bd32c120eac0a"
 dependencies = [
  "axi-ethernet-pac",
  "log",
@@ -65,6 +67,7 @@ dependencies = [
 [[package]]
 name = "axi-ethernet-pac"
 version = "0.1.0"
+source = "git+https://github.com/zflcs/axi-ethernet.git#32482df395383b7f5e61b8a79d9bd32c120eac0a"
 dependencies = [
  "bare-metal 1.0.0",
  "cortex-m",
@@ -75,6 +78,7 @@ dependencies = [
 [[package]]
 name = "axidma-pac"
 version = "0.1.0"
+source = "git+https://github.com/zflcs/axi-dma.git#9c3cf75fc8129c9aad85e384d48d71b567f2e8ae"
 dependencies = [
  "bare-metal 1.0.0",
  "riscv 0.10.1",
