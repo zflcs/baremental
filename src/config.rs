@@ -10,12 +10,13 @@ pub const KERNEL_HEAP_SIZE: usize = 0x100_000;
 
 pub const CLOCK_FREQ: usize = 10_000_000;
 // pub const MSEC_PER_SEC: usize = 1000;
+pub const USEC_PER_SEC: usize = 1_000_000;
 
 
 pub const CPU_NUM: usize = 1;
 
 use axi_dma::AxiDmaConfig;
-use axi_ethernet::{XAE_MAX_FRAME_SIZE, XAE_MAX_JUMBO_FRAME_SIZE};
+use axi_ethernet::XAE_MAX_JUMBO_FRAME_SIZE;
 
 pub const AXI_DMA_CONFIG: AxiDmaConfig = AxiDmaConfig {
     device_id: 0,

@@ -27,6 +27,9 @@ mod trap;
 mod drivers;
 
 static BOOT_HART: AtomicUsize = AtomicUsize::new(1);
+static mut START_TIME: usize = 0;
+static mut END_TIME: usize = 0;
+static mut DMA_TX_DURATION: usize = 0;
 
 /// Initialize kernel stack in .bss section.
 #[link_section = ".bss.stack"]
@@ -112,7 +115,7 @@ pub fn rust_main_init(hart_id: usize) {
     mm::init_heap();
     plic::init();
     net::init();
-    drivers::init();
+    // drivers::init();
     if CPU_NUM > 1 {
         for i in 0..CPU_NUM {
             if i != hart_id {
@@ -141,7 +144,10 @@ pub fn rust_main(hart_id: usize) -> ! {
 
     // net::udp_test();
     // net::tcp_test();
-    test_n_ext();
+    #[cfg(feature = "sync")]
+    drivers::eth_test();
+    #[cfg(feature = "async")]
+    drivers::async_eth_test();
     loop {}
 }
 
@@ -151,28 +157,6 @@ pub fn delay(ms: usize) {
     while time::read() - start < CLOCK_FREQ * ms / 1000 {}
 }
 
-/// test the RISC-V N extension
-pub fn test_n_ext() {
-    unsafe {
-        sideleg::set_usoft();   
-        utvec::write(user_trap_handler as _, utvec::TrapMode::Direct);
-        ustatus::set_uie();
-        uie::set_usoft();
-        sip::set_usoft();
-        uip::set_usoft();
-        sstatus::set_spp(sstatus::SPP::User);
-        sepc::write(user_fun as _);
-        core::arch::asm!("sret");
-    }
-}
-
-pub fn user_fun() {
-    loop {
-        // log::debug!("into user_fun");
-        unsafe { core::arch::asm!("ebreak"); }
-    }
-}
-
-pub fn user_trap_handler() {
-    log::debug!("into user_trap_handler");
+pub fn read_time_reg() -> usize {
+    time::read()
 }

@@ -17,8 +17,16 @@ blake3 = { version = "1.2.0", default-features = false }
 array-init = "2.0.0"
 sbi-rt = { version = "0.0.2", features = ["legacy"] }
 axi-ethernet = { path = "../axi-ethernet" }
-axi-dma = { path = "../axi-dma" }
+axi-dma = { path = "../axi-dma", default-features = false, optional = true }
 kernel-sync = {  git = "https://github.com/tkf2019/kernel-sync" }
+crossbeam = { version = "0.8", default-features = false, features = ["alloc"] }
+
+
+[features]
+async = ["axi-dma/async"]
+sync = ["axi-dma/sync"]
+
+default = ["async"]
 
 [dependencies.smoltcp]
 version = "0.10.0"

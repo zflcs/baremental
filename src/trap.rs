@@ -2,7 +2,7 @@ use crate::hart_id;
 use core::arch::{asm, global_asm};
 use riscv::register::{
     mtvec::TrapMode,
-    scause, sepc, sie,    
+    scause, sepc, sie,
     sstatus::{self, Sstatus},
     stval, stvec, uip,
 };
@@ -22,11 +22,8 @@ pub fn init() {
     }
     unsafe {
         stvec::write(__alltraps as usize, TrapMode::Direct);
-        // clear sideleg
-        asm!("csrwi sideleg, 0");
         // enable supervisor interrupt
         sstatus::set_sie();
-        sie::set_usoft();
         // enable external interrupt
         sie::set_sext();
     }

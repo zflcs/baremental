@@ -32,7 +32,14 @@ pub fn init_hart(hart_id: usize) {
     let context = get_context(hart_id, 'S');
     Plic::clear_enable(context, 0);
     Plic::set_threshold(context, Priority::any());
+    #[cfg(feature = "sync")]
     for irq in 1..=3 {
+        Plic::enable(context, irq);
+        Plic::claim(context);
+        Plic::complete(context, irq);
+    }
+    #[cfg(feature = "async")]
+    for irq in 1..=5 {
         Plic::enable(context, irq);
         Plic::claim(context);
         Plic::complete(context, irq);

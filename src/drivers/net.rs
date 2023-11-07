@@ -83,21 +83,19 @@ pub fn eth_init() {
     eth.start();
 }
 
+#[cfg(feature = "sync")]
 impl RxToken for AxiNet {
     fn consume<R, F>(self, f: F) -> R
     where
         F: FnOnce(&mut [u8]) -> R {
         let rx_frame = Box::pin([0u8; AXI_NET_CONFIG.mtu]);
         let mut buf = self.dma.rx_submit(rx_frame).unwrap().wait();
-        if !self.dma_intr.rx_intr_handler() {
-            dma_init();
-        }
-        self.dma.rx_from_hw();
         log::trace!("receive buf {:x?}", &buf[0..14]);
         f((*buf).as_mut())
     }
 }
 
+#[cfg(feature = "sync")]
 impl TxToken for AxiNet {
     fn consume<R, F>(self, len: usize, f: F) -> R
     where
@@ -105,15 +103,12 @@ impl TxToken for AxiNet {
         let mut tx_frame = Box::pin(vec![0u8; len]);
         let res = f((*tx_frame).as_mut());
         self.dma.tx_submit(tx_frame).unwrap().wait();
-        if !self.dma_intr.tx_intr_handler() {
-            dma_init();
-        }
-        self.dma.tx_from_hw();
         log::trace!("transmit buf");
         res
     }
 }
 
+#[cfg(feature = "sync")]
 impl Device for AxiNet {
     type RxToken<'a> = Self;
     type TxToken<'a> = Self;

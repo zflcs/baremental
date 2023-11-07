@@ -11,7 +11,6 @@ use crate::{config::AXI_NET_CONFIG, drivers::AXI_NET};
 
 
 
-
 pub static INTERFACE: Lazy<Arc<SpinLock<Interface>>> = Lazy::new(|| Arc::new(SpinLock::new(
     Interface::new(
             Config::new(EthernetAddress(AXI_NET_CONFIG.mac_addr).into()),
